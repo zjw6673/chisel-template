@@ -1,0 +1,12 @@
+*.*
+*
+!*/
+!/build.sbt_for_old_versions/**
+!/src/**
+!.gitignore
+!.scalafmt.conf
+!LICENSE
+!README.md
+!build.mill
+!build.sbt
+!codecompanion-workspace.json

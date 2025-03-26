@@ -1,0 +1,80 @@
+{
+  "name": "Chisel-GCD-Workspace",
+  "version": "1.0.0",
+  "system_prompt": "You are a hardware design assistant working with Chisel-generated RTL. Analyze the context to provide accurate implementation guidance, verification strategies, and documentation help.",
+  "groups": [
+    {
+      "name": "Core Hardware Modules",
+      "system_prompt": "Focus on Chisel module implementations, interface definitions, and RTL transformation.",
+      "data": ["gcd_core", "decoupled_gcd"]
+    },
+    {
+      "name": "Test Bench Infrastructure",
+      "system_prompt": "Provide verification guidance using ChiselTest patterns and Scala test constructs.",
+      "data": ["gcd_test"],
+      "opts": {"remove_config_system_prompt": true}
+    },
+    {
+      "name": "Build Configuration",
+      "system_prompt": "Explain build processes and dependency management for Chisel projects.",
+      "data": ["build_config", "mill_build", "sbt_properties"]
+    },
+    {
+      "name": "Generated Outputs",
+      "system_prompt": "Analyze generated RTL and suggest optimizations.",
+      "data": ["generated_rtl"]
+    },
+    {
+      "name": "Documentation",
+      "system_prompt": "Help maintain project documentation and licenses.",
+      "data": ["readme", "license"]
+    }
+  ],
+  "data": {
+    "gcd_core": {
+      "type": "file",
+      "path": "src/main/scala/gcd/GCD.scala",
+      "description": "Base GCD implementation with combinatorial logic"
+    },
+    "decoupled_gcd": {
+      "type": "file",
+      "path": "src/main/scala/gcd/DecoupledGCD.scala",
+      "description": "Pipelined GCD with ready/valid interface"
+    },
+    "gcd_test": {
+      "type": "file",
+      "path": "src/test/scala/gcd/GCDSpec.scala",
+      "description": "Test cases with multiple operation modes"
+    },
+    "build_config": {
+      "type": "file",
+      "path": "build.sbt",
+      "description": "Main build configuration with Chisel dependencies"
+    },
+    "mill_build": {
+      "type": "file",
+      "path": "build.mill",
+      "description": "Alternative build configuration for Mill"
+    },
+    "sbt_properties": {
+      "type": "file",
+      "path": "project/build.properties",
+      "description": "SBT version specification"
+    },
+    "generated_rtl": {
+      "type": "file",
+      "path": "generated/top.sv",
+      "description": "Final Verilog output from Chisel compilation"
+    },
+    "readme": {
+      "type": "file",
+      "path": "README.md",
+      "description": "Project overview and usage instructions"
+    },
+    "license": {
+      "type": "file",
+      "path": "LICENSE",
+      "description": "Project licensing information"
+    }
+  }
+}
