@@ -1,23 +1,23 @@
 {
   "name": "Chisel-GCD-Workspace",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "system_prompt": "You are a hardware design assistant working with Chisel-generated RTL. Analyze the context to provide accurate implementation guidance, verification strategies, and documentation help.",
   "groups": [
     {
       "name": "Core Hardware Modules",
       "system_prompt": "Focus on Chisel module implementations, interface definitions, and RTL transformation.",
-      "data": ["gcd_core", "decoupled_gcd"]
+      "data": ["example_module"]
     },
     {
       "name": "Test Bench Infrastructure",
       "system_prompt": "Provide verification guidance using ChiselTest patterns and Scala test constructs.",
-      "data": ["gcd_test"],
+      "data": ["example_test"],
       "opts": {"remove_config_system_prompt": true}
     },
     {
       "name": "Build Configuration",
       "system_prompt": "Explain build processes and dependency management for Chisel projects.",
-      "data": ["build_config", "mill_build", "sbt_properties"]
+      "data": ["makefile", "build_config", "mill_build", "sbt_properties"]
     },
     {
       "name": "Generated Outputs",
@@ -31,20 +31,20 @@
     }
   ],
   "data": {
-    "gcd_core": {
+    "example_module": {
       "type": "file",
-      "path": "src/main/scala/gcd/GCD.scala",
-      "description": "Base GCD implementation with combinatorial logic"
+      "path": "src/main/scala/example/moduleExample.scala",
+      "description": "An example module for this project"
     },
-    "decoupled_gcd": {
+    "example_test": {
       "type": "file",
-      "path": "src/main/scala/gcd/DecoupledGCD.scala",
-      "description": "Pipelined GCD with ready/valid interface"
+      "path": "src/test/scala/example/testExample.scala",
+      "description": "An example testbench for this project"
     },
-    "gcd_test": {
+    "makefile": {
       "type": "file",
-      "path": "src/test/scala/gcd/GCDSpec.scala",
-      "description": "Test cases with multiple operation modes"
+      "path": "Makefile"
+      "description": "Makefile to manage the whole project"
     },
     "build_config": {
       "type": "file",
@@ -63,7 +63,7 @@
     },
     "generated_rtl": {
       "type": "file",
-      "path": "generated/top.sv",
+      "path": "finals/top.sv",
       "description": "Final Verilog output from Chisel compilation"
     },
     "readme": {

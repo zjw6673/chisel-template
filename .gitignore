@@ -3,6 +3,7 @@
 !*/
 !/build.sbt_for_old_versions/**
 !/src/**
+!/finals/**
 !.gitignore
 !.scalafmt.conf
 !LICENSE

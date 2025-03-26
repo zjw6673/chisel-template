@@ -14,6 +14,7 @@ lazy val root = (project in file("."))
     libraryDependencies ++= Seq(
       "org.chipsalliance" %% "chisel" % chiselVersion,
       // chiseltest6 is ported to Chisel 5 and 6, which is based on Verilator
+      // chiseltest automatically includes the correct version of scalatest
       "edu.berkeley.cs" %% "chiseltest" % "6.0.0"
     ),
     scalacOptions ++= Seq(
