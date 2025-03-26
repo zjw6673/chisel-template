@@ -8,6 +8,7 @@
 !.scalafmt.conf
 !LICENSE
 !README.md
+!Makefile
 !build.mill
 !build.sbt
 !codecompanion-workspace.json
