@@ -5,8 +5,9 @@ package example
 import chisel3._
 import chiseltest._
 import org.scalatest.flatspec.AnyFlatSpec
+import example.moduleExample
 
-class testExample extends AnyFlatSpec with ChiselScalatestTester {
+class moduleExampleTest extends AnyFlatSpec with ChiselScalatestTester {
   "DUT" should "pass" in {
     test(new moduleExample) { dut =>
       dut.io.a.poke(0.U) // set input via poke

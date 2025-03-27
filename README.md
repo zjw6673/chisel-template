@@ -562,7 +562,44 @@ when (tick) { // tirggered by tick
 val btnClean = (shiftReg(2) & shiftReg(1)) | (shiftReg(2) & shiftReg(0)) | (shiftReg(1) & shiftReg(0))
 ```
 
-## testing your design
+## Naming Conventions
+
+### Filenames
+
+Filenames should consist of **case-sensitive** name of the **top-level** class it contains
+
+### Packages
+
+Packages should be named after the **pull path to get to the source** from scala/, with **all lowercase** and **no underscore**
+
+### Imports
+
+Avoid wildcard (._) imports except for chisel3._, and always put chisel3._ on top
+
+```scala
+// example
+import chisel3._
+
+import the.other.thing.that.i.reference.inline
+import the.other.things.that.i.reference.{ClassOne, ClassTwo}
+```
+
+### Tests
+
+- Test classes: named starting with the class they are testing, and end with Test
+- Test files: should match the test class name, reside in /tests/
+- Test package: should be composed of the package that contains the class under test
+
+### Module classes and Code
+
+use `lowerCamelCase` for variable and `UpperCamelCase` for classes
+also use `UpperCamelCase` for constants, as they are actually objects in scala
+
+
+
+for more info, checkout [this page](https://www.chisel-lang.org/docs/developers/style)
+
+## Testing your design
 
 In chisel, you can run unit test or regression test with **chiseltest**,
 or generate **waveform** for more complex designs
