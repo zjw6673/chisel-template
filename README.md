@@ -248,7 +248,7 @@ decode.io <> execute.io
 io <> execute.io
 ```
 
-### Builtin Modules
+### Basic Modules
 
 #### MUX
 ```scala
@@ -502,6 +502,64 @@ file.close()
 
 val mem = SyncReadMem(1024, UInt(8.W)) // 1 KB of mem
 loadMemoryFromFileInline(mem, "hello.hex", firrtl.annotations.MemoryLoadFileType.Hex) // load by 4 bits(hex)
+```
+
+### Advanced: Input processing
+
+Signals from external world could be **asynchronous**, **debouncing** and **spikey**
+This should be tackled in the digital domain
+
+the input processing should follow the these steps:
+
+#### STEP1: Asynchronous input
+
+asychronous inputs are inputs that are not synchronous to system clk, they may cause:
+
+- **metastability**: where signals are between 0 and 1 before they stabilize
+    - solution: **use two flip-flops at the input**, leaving more time for the signal to stabilize
+    ```scala
+    val btnSync = RegNext(RegNext(btn))
+    ```
+- **misregistrition**: if a asynchronous input changes close to posedge clk, due to delay, it may cause different usages of that input to be registered at different clk cycles
+
+#### STEP2: Debouncing
+
+Switches and buttons need time to transition between 0 and 1, during which they may **bounce** between 0 and 1
+If not processed, multiple transition events may be detected, which is unwanted
+
+solution: set a time filter by **sampling** the siganl with a time interval larger than the max_unstable_time
+
+```scala
+val fac = 100000000/100 // assume the clk is 100MHz, and we sample at 100Hz, so that's 100M/100 clk cycle per sample
+
+val btnDebReg = Reg(Bool())
+// create a counter to do that
+val cntReg = RegInit(0.U(32.W))
+val tick = cntReg === (fac-1).U // generate one tick per counter cycle
+cntReg := cntReg + 1.U
+when (tick) {
+    cntReg := 0.U
+    btnDebReg := btnSync    // update btnDebReg per tick
+}
+```
+
+#### STEP3: Filtering spikes
+
+Despite sampling, the input may still contain unwanted spikes in severe cases
+This could be tackled with a **majority voting circuit**, that is, feed the output of samples into a shift register
+to construct a parallel n-bit input history, and vote for the majority
+
+NOTE: this step is seldom needed
+
+```scala
+val shiftReg = RegInit(0.U(3.W)) // this is a 3-bit majority voting circuit
+
+when (tick) { // tirggered by tick
+    // shift left and input
+    shiftReg := shiftReg(1, 0) ## btnDebReg
+}
+// Majority voting
+val btnClean = (shiftReg(2) & shiftReg(1)) | (shiftReg(2) & shiftReg(0)) | (shiftReg(1) & shiftReg(0))
 ```
 
 ## testing your design
