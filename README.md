@@ -113,6 +113,7 @@ class BundleVec extends Bundle {
 - Wire: combinational logic
 - Reg: register
 - IO: ports
+- Mem/SyncReadMem: memory
 
 ```scala
 // use = to generate hardwire
@@ -128,6 +129,8 @@ val reg = RegInit(0.S(8.W))
 ```
 
 ### Basic grammar
+
+#### bits operations
 
 ```scala
 // 1. logic operations
@@ -196,23 +199,179 @@ val replication = Fill(n,x) // replicate x n times
 > assignWord := vecResult.asUInt // use asUInt method in Vec to avoid order problem
 >```
 
+#### bulk connection: fast way to connect modules
+
+use `<>` to connect IO bundles quickly between modules. When applied, it searches for Input, Output pairs
+with the same name and connects them
+
+for example:
+
+```scala
+class Fetch extends Module {
+    val io = IO(new Bundle {
+        val instr = Output (UInt (32.W))
+        val pc = Output (UInt (32.W))
+    })
+    // ... Implementation of fetch
+}
+
+class Decode extends Module {
+    val io = IO(new Bundle {
+        val instr = Input(UInt (32.W))
+        val pc = Input(UInt (32.W))
+        val aluOp = Output(UInt (5.W))
+        val regA = Output (UInt (32.W))
+        val regB = Output (UInt (32.W))
+    })
+    // ... Implementation of decode
+}
+
+class Execute extends Module {
+    val io = IO(new Bundle {
+        val aluOp = Input(UInt (5.W))
+        val regA = Input(UInt (32.W))
+        val regB = Input(UInt (32.W))
+        val result = Output(UInt (32.W))
+    })
+    // ... Implementation of execute
+}
+
+val fetch = Module(new Fetch())
+val decode = Module(new Decode())
+val execute = Module(new Execute)
+
+// connect the ports between submodules like this
+fetch.io <> decode.io
+decode.io <> execute.io
+
+// and ports can also be connected between current and submodule
+io <> execute.io
+```
+
 ### Builtin Modules
 
 #### MUX
 ```scala
-
+// the smallest MUX is a 2to1 MUX
 val result = Mux(sel, a, b) // sel is a Bool and a, b must be the same type. return a when true.B
 
-val v = Wire(Vec(3, UInt(4.W))) // for larger MUX, use a Vec
+// construct a chain of Mux2to1 with when, .elsewhen, .otherwise
+val w = WireDefault(0.U(8.W))
+when (cond1) {
+    w := 1.U
+} .elsewhen(cond2) {
+    w := 2.U
+} .otherwise { // remember to set a default value
+    w := 3.U
+}
+
+// for larger MUX, use a Vec
+val v = Wire(Vec(3, UInt(4.W)))
 v(0) := a
 v(1) := b
 v(2) := c
 val index = 1.U(2.W)
 val result = v(index)
-// or more concisely
+// or write more concisely
 val defVecSig = VecInit(a, b, c)
 val vecOutSig = defVecSig(sel)
 ```
+
+#### DECODER
+
+```scala
+import chisel3.util._
+
+// a 24 decoder
+val result = WireDefault(0.U(4.W)) // be sure to provide a default value
+switch(sel) {
+    is (0.U) { result := "b0001".U }
+    is (2.U) { result := "b0010".U }
+    is (3.U) { result := "b0100".U }
+    is (4.U) { result := "b1000".U }
+}
+// or more concisely
+result := 1.U << sel
+```
+
+#### ENCODER
+
+```scala
+import chisel3.util._
+
+// a 42 encoder
+val result = WireDefault(0.U(2.W)) // be sure to provide a default value
+switch(a) {
+    is ("b0001".U) { result := 0.U }
+    is ("b0010".U) { result := 1.U }
+    is ("b0100".U) { result := 2.U }
+    is ("b1000".U) { result := 3.U }
+}
+// or more concisely with a generator loop
+val v = Wire(Vec(16, UInt(4.W))) // a 16to4 encoder
+v(0) := 0.U
+for (i <- 1 until 16) { // loops i from 1 to 15
+    v(i) = Mux(hotIn(i), i.U, 0.U) | v(i-1)
+}
+val result = v(15)
+
+// for priority encoders, use a arbiter and a normal encoder
+```
+
+#### ARBITER
+
+an arbiter arbitrates requests from **several clients** to a **shared resource**
+
+A priority arbiter choose clients with a priority, the lower the bit number, the higher the priority.
+e.g. 0101 generates 0001
+``` scala
+// write in a table with switch for small arbiters
+import chisel3.util._
+
+val grant = WireDefault("b000".U(4.W))
+val request = VecInit(a, b, c)
+
+switch(request) {
+    is ("b000".U) { grant := "b000".U }
+    // ...
+    is ("b111".U) { grant := "b001".U }
+}
+
+// or use the logic below
+val request = VecInit(a, b, c)
+val grant = VecInit(false.B, false.B, false.B)
+val notGrantedYet = VecInit(false.B, false.B) // record if some previous wire has already been granted
+
+grant(0) := request(0)
+notGrantedYet(0) := !grant(0)
+
+grant(1) := request(1) && notGrantedYet(0)
+notGrantedYet(1) := notGrantedYet(0) && !grant(1)
+
+grant(2) := request(2) && notGrantedYet(1)
+
+// This logic can be easily applied to large arbitors
+val grant = VecInit.fill(n)(false.B)
+val notGrantedYet = VecInit.fill(n)(false.B)
+
+grant(0) := request(0)
+notGrantedYet(0) := !grant(0)
+for (i <- 1 until n) {
+    grant(i) := request(i) && notGrantedYet(i-1)
+    notGrantedYet(i) := !grant(i) && notGrantedYet(i-1)
+}
+```
+
+A fair arbiter choose clients by remembering the last arbitration
+
+#### COMPARATOR
+
+```scala
+
+val equ = a === b
+val gt = a > b
+```
+since they are too easy, thay are usually directly used instead of wrapped into a module
 
 #### REG
 
