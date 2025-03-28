@@ -1,6 +1,43 @@
 Chisel Project Template
 =======================
 
+## Table of Contents
+
+- [version control](#version-control)
+- [Suggested workflow](#suggested-workflow)
+- [Designing with Chisel](#designing-with-chisel)
+  - [Types and constants](#types-and-constants)
+    - [basic Chisel types](#basic-chisel-types)
+    - [abstracted constructs](#abstracted-constructs)
+    - [basic hardware type](#basic-hardware-type)
+    - [type conversion](#type-conversion)
+  - [Basic grammar](#basic-grammar)
+    - [bits operations](#bits-operations)
+    - [bulk connection](#bulk-connection)
+  - [Basic Modules](#basic-modules)
+    - [MUX](#mux)
+    - [DECODER](#decoder)
+    - [ENCODER](#encoder)
+    - [ARBITER](#arbiter)
+    - [COMPARATOR](#comparator)
+    - [REG](#reg)
+    - [COUNTER](#counter)
+    - [SHIFT REG](#shift-reg)
+    - [MEM](#mem)
+  - [Advanced: Input processing](#advanced-input-processing)
+    - [Asynchronous input](#asynchronous-input)
+    - [Debouncing](#debouncing)
+    - [Filtering spikes](#filtering-spikes)
+  - [Hardware generator](#hardware-generator)
+- [Naming Conventions](#naming-conventions)
+  - [Filenames](#filenames)
+  - [Packages](#packages)
+  - [Imports](#imports)
+  - [Tests](#tests)
+- [Testing your design](#testing-your-design)
+  - [chiseltest](#chiseltest)
+  - [Waveforms](#waveforms)
+
 ## version control
 
 be sure to have the correct version setup:
@@ -126,6 +163,36 @@ reg := -3.S
 // it's always safer to generate hardware with default values(to prevent latches)
 val number = WireDefault(0.U(4.W))
 val reg = RegInit(0.S(8.W))
+```
+
+#### type conversion
+
+since all types represent collection of bits, it's east to convert between them. But be carefull of the **order**!!
+
+```scala
+// convert from Vec to UInt
+// Order: first byte into lower 8 bits, ...
+val vec = Wire(Vec(4, UInt(8.W)))
+val word = vec.asUInt // use the as... method
+
+// convert from UInt to Vec
+val vec = word.asTypeOf(Vec(4, UInt(8.W))) // use the as + typeOf method
+
+// convert from a Bundle to UInt
+// Order: last field into lower bits, ...
+class MyBundle extends Bundle {
+    val a = UInt(8.W)
+    val b = UInt(16.W)
+}
+val bundle = Wire(new MyBundle)
+val word = bundle.asUInt
+
+// convert from a UInt to a Bundle
+val word = UInt(24.W)
+val bundle = word.asTypeOf(new MyBundle)
+
+// you can use this trick to initialize a bundle to 0
+val bundle = 0.U.asTypeOf(new MyBundle)
 ```
 
 ### Basic grammar
@@ -562,6 +629,141 @@ when (tick) { // tirggered by tick
 val btnClean = (shiftReg(2) & shiftReg(1)) | (shiftReg(2) & shiftReg(0)) | (shiftReg(1) & shiftReg(0))
 ```
 
+### Hardware generator
+
+the most basic generator is a for loop. (like generate for loop in verilog)
+
+```scala
+import chisel3._
+
+class BcdTable extends Module { // a lut to transfer decimal into bcd
+    val io = IO(new Bundle{
+        val address = Input(UInt(8.W))
+        val data = Ontput(UInt(8.W))
+    })
+    val table = Wire(Vec(100, UInt(8.W)))
+    // the hardware generator
+    for (i <- 0 until 100) {
+        table(i) := (((i/10) << 4) + i % 10).U
+    }
+    io.data := table(io.address)
+}
+```
+
+external files can also be read for hardware generation:
+
+```scala
+import chisel3._
+import scala.io.Source // use scala function to read file
+
+class FileReader extends Module {
+    val io = IO(new Bundle{
+        val address = Input(UInt(8.W))
+        val data = Output(UInt(8.W))
+    })
+    // use a Array to store file data
+    val array = new Array[Int](256)
+    var idx = 0
+    val source = Source.fromFile("data.txt")
+    for (line <- source.getLines()) {
+        array(idx) = line.toInt
+        idx += 1
+    }
+
+    // convert the int array to a Seq then to a Vec in Chisel
+    val table = VecInit(array.toIndexedSeq.map(_.U(8.W)))
+
+    io.data := table(io.address)
+}
+```
+Another way to generate module is by passing args to your module design
+
+```scala
+class ParamAdder(n: Int) extends Module { // this is a moudle with a para
+    val io = IO(new Bundle{
+        val a = Input(UInt(n.W))
+        val b = Input(UInt(n.W))
+        val c = Output(UInt(n.W))
+    })
+    io.c = io.a + io.b
+}
+
+// generate the module by passing an arg, and wrap it in Module()
+val add8 = Module(new ParamAdder(8))
+val add16 = Module(new ParamAdder(16))
+
+// if more than one param is needed, wrap them in a CASE CLASS
+case class Config(txDepth: Int, rxDepth: Int, width: Int) {
+    assert(txDepth > 0 && rxDepth > 0 && width > 0, "param must be larger than 0!") // you can even add an assert to ensure params are valid
+}
+val param = Config(4, 2, 16) // instanciate a param case class without 'new'
+```
+In many cases, params of a fixed type is not enough, we need a more flexible para that can accept many types of data:
+
+```scala
+// 1. Function with type parameters
+// this is a 2to1Mux of any type of data
+def myMux[T <: Data](sel: Bool, tPath: T, fPath: T): T = {
+    val ret: T = Mux(sel === true.B, tPath, fPath)
+    ret
+}
+val result = myMux(sel, UInt(8.W), UInt(8.W))
+
+// you can use .cloneType method to clone the type of a signal
+val ret = Wire(signal.cloneType)
+
+// 2. Module with type parameters
+class NocRouter[T <: Data](dt: T, n: Int) extends Module {
+    val io = IO(new Bundle{
+        val inPort = Input(Vec(n, dt))
+        val address = Input(Vec(n, UInt(8.W)))
+        val outPort = Output(Vec(n, dt))
+    })
+}
+// define type T as a bundle
+class Payload extends Bundle {
+    val data = UInt(16.W)
+    val flag = Bool()
+}
+val router = Module(new NocRouer(new Payload, 2))
+
+// 3. Bundle with type parameters
+class aBundle[T <: Data](private val dt: T) extends Bundle { // ensure to make dt private or It becomes part of the Bundle
+    val address = UInt(8.W)
+    val dt = dt.cloneType
+}
+```
+
+Hardware with optional ports: insert the port if a signal is true, ignore it otherwise
+
+This could be implemented with 'Option' in scala, which return a type 'Some' or a 'None', and can be extracted with method 'get'
+
+```scala
+class RegFile(debug: Boolean) extends Module {
+    val io = IO(new Bundle{
+        // ...
+        val debugPort = if (debug)
+            Some(Output(Vec(32, UInt(32.W)))) else None
+    })
+    val regfile = RegInit(VecInit(Seq.fill(32)(0.U(32.W))))
+    // ...
+    if (debug) {
+        io.debugPort.get := regfile
+    }
+}
+
+// in the testfile, write:
+dut.io.debugPort.get(4).expect(123.U)
+```
+
+Generating hardware is eay with classes that extends from Module, you only need to instantiate with:
+`val instance = Module(new YourModule(params))`
+
+But what about functions? How should you generate hardware with functions? There's a example
+```scala
+
+```
+
 ## Naming Conventions
 
 ### Filenames
@@ -593,9 +795,8 @@ import the.other.things.that.i.reference.{ClassOne, ClassTwo}
 ### Module classes and Code
 
 use `lowerCamelCase` for variable and `UpperCamelCase` for classes
+
 also use `UpperCamelCase` for constants, as they are actually objects in scala
-
-
 
 for more info, checkout [this page](https://www.chisel-lang.org/docs/developers/style)
 
@@ -613,6 +814,7 @@ or generate **waveform** for more complex designs
 ### Waveforms
 
 chisel testers can generate a .vcd file that includes all regs and IO signals.
+
 to do so, you can:
 
 1. modified the Makefile, which applies an api
