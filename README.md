@@ -24,7 +24,7 @@ Chisel Project Template
     - [COUNTER](#counter)
     - [SHIFT REG](#shift-reg)
     - [MEM](#mem)
-  - [Advanced: Input processing](#advanced-input-processing)
+  - [Input processing](#input-processing)
     - [Asynchronous input](#asynchronous-input)
     - [Debouncing](#debouncing)
     - [Filtering spikes](#filtering-spikes)
@@ -64,7 +64,7 @@ be sure to have the correct version setup:
 
 #### basic Chisel types:
 
-- Bool(): one bit signal, no need for a Width arg
+- **Bool()**: one bit signal, no need for a Width arg
 - **Bits(n.W)**: vector of n bits in (W)idth with no meaning
 - **UInt(n.W)**: vector of n bits in (W)idth which is interpreted as (U)nsigned Int
 - **SInt(n.W)**: vector of n bits in (W)idth which is interpreted as (S)igned Int(in 2's complement)
@@ -571,7 +571,7 @@ val mem = SyncReadMem(1024, UInt(8.W)) // 1 KB of mem
 loadMemoryFromFileInline(mem, "hello.hex", firrtl.annotations.MemoryLoadFileType.Hex) // load by 4 bits(hex)
 ```
 
-### Advanced: Input processing
+### Input processing
 
 Signals from external world could be **asynchronous**, **debouncing** and **spikey**
 This should be tackled in the digital domain
@@ -754,14 +754,6 @@ class RegFile(debug: Boolean) extends Module {
 
 // in the testfile, write:
 dut.io.debugPort.get(4).expect(123.U)
-```
-
-Generating hardware is eay with classes that extends from Module, you only need to instantiate with:
-`val instance = Module(new YourModule(params))`
-
-But what about functions? How should you generate hardware with functions? There's a example
-```scala
-
 ```
 
 ## Naming Conventions
