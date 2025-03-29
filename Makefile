@@ -1,5 +1,5 @@
 ################### Config panel ####################
-TOPMODULE ?= example.moduleExample  # module to build
+TOPMODULE ?= example.Uart  # module to build
 TEST ?= example.testExample         # test to run
 
 # SystemVerilog is generated at ./generated, change this in App class instance in your module
